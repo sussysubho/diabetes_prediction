@@ -1,12 +1,13 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-import os
 
 # Initialize Flask app
-app = Flask(__name__, template_folder="templates")
+app = Flask(__name__)
+CORS(app)  # Enable CORS for frontend API calls (e.g., from Firebase)
 
 # Define the Model Architecture (must match training)
 class DiabetesModel(nn.Module):
@@ -48,7 +49,7 @@ model.eval()
 
 @app.route("/")
 def home():
-    return render_template("Dark-knight_index.html")
+    return "🔥 Diabetes Prediction API is live on Render!"
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -58,7 +59,7 @@ def predict():
                               data["s1"], data["s2"], data["s3"], data["s4"], 
                               data["s5"], data["s6"]]], dtype=np.float32)
 
-        input_tensor = torch.tensor(features, dtype=torch.float32)
+        input_tensor = torch.tensor(features, dtype=torch.float32).to(device)
 
         with torch.no_grad():
             scaled_prediction = model(input_tensor).cpu().numpy()[0][0]
@@ -76,5 +77,6 @@ def predict():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ✅ Required for Render
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False, host='0.0.0.0', port=10000)
