@@ -32,9 +32,9 @@ class DiabetesModel(nn.Module):
 # Use only CPU
 device = torch.device("cpu")
 
-# Allow loading custom class
+# Allow loading custom class for PyTorch 2.6+
 import torch.serialization
-torch.serialization.add_safe_globals([DiabetesModel])
+torch.serialization.add_safe_globals({"__main__.DiabetesModel": DiabetesModel})
 
 # Load the full model with scaler
 model_path = "Dark-knight_model.pkl"
