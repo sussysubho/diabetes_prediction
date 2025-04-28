@@ -7,11 +7,18 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 
+# ✅ For safe loading of scaler
+import torch.serialization
+from sklearn.preprocessing import StandardScaler
+
+# ✅ Allow unpickling StandardScaler
+torch.serialization.add_safe_globals({"sklearn.preprocessing._data.StandardScaler": StandardScaler})
+
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Allow CORS for frontend integration (like Firebase)
+CORS(app)  # Allow CORS for frontend integration (e.g., Firebase)
 
-# Define the Model Architecture (exactly same as training)
+# ✅ Define the Model Architecture
 class DiabetesModel(nn.Module):
     def __init__(self, input_dim, scaler_y=None):
         super(DiabetesModel, self).__init__()
@@ -22,7 +29,7 @@ class DiabetesModel(nn.Module):
         self.bn2 = nn.BatchNorm1d(16)
         self.dropout2 = nn.Dropout(0.1)
         self.fc3 = nn.Linear(16, 1)
-        self.scaler_y = scaler_y  # Attach scaler inside model (optional)
+        self.scaler_y = scaler_y
 
     def forward(self, x):
         x = F.leaky_relu(self.bn1(self.fc1(x)), negative_slope=0.01)
@@ -31,21 +38,20 @@ class DiabetesModel(nn.Module):
         x = self.dropout2(x)
         return self.fc3(x)
 
-# Load Model
-device = torch.device('cpu')  # Always CPU on Render
+# ✅ Load model safely
+device = torch.device('cpu')  # Render is CPU only
 
-# Initialize empty model
-model = DiabetesModel(input_dim=10)
+model = DiabetesModel(input_dim=10)  # Input dimension must match training
 
-# Load checkpoint
-checkpoint = torch.load("Dark-knight_model.pkl", map_location=device)
+# Load saved checkpoint
+checkpoint = torch.load("Dark-knight_model_fixed.pkl", map_location=device)
 model.load_state_dict(checkpoint["model_state_dict"])
 model.scaler_y = checkpoint.get("scaler_y", None)
 
 model.to(device)
 model.eval()
 
-# API Routes
+# ✅ API Routes
 
 @app.route("/")
 def home():
@@ -65,7 +71,7 @@ def predict():
         with torch.no_grad():
             scaled_prediction = model(input_tensor).cpu().numpy()[0][0]
 
-        # If scaler_y exists, unscale the prediction
+        # Unscale if scaler_y exists
         if model.scaler_y:
             unscaled_prediction = model.scaler_y.inverse_transform(np.array([[scaled_prediction]]))[0][0]
         else:
@@ -79,6 +85,6 @@ def predict():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Entry point for Render deployment
+# ✅ Entry point for local dev (optional)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
