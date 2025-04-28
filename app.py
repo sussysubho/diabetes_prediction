@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend API calls (e.g., from Firebase)
+CORS(app)
 
 # Define the Model Architecture (must match training)
 class DiabetesModel(nn.Module):
@@ -20,7 +20,7 @@ class DiabetesModel(nn.Module):
         self.bn2 = nn.BatchNorm1d(16)
         self.dropout2 = nn.Dropout(0.1)
         self.fc3 = nn.Linear(16, 1)
-        self.scaler_y = scaler_y  # Save scaler inside model
+        self.scaler_y = scaler_y
 
     def forward(self, x):
         x = F.leaky_relu(self.bn1(self.fc1(x)), negative_slope=0.01)
@@ -29,21 +29,16 @@ class DiabetesModel(nn.Module):
         x = self.dropout2(x)
         return self.fc3(x)
 
-# Use only CPU
-device = torch.device("cpu")
+# CPU only
+device = torch.device('cpu')
 
-# Allow loading custom class for PyTorch 2.6+
+# Important: Allow loading custom class for gunicorn
 import torch.serialization
 torch.serialization.add_safe_globals({"__main__.DiabetesModel": DiabetesModel})
 
-# Load the full model with scaler
+# Load full model correctly
 model_path = "Dark-knight_model.pkl"
-try:
-    model = torch.load(model_path, map_location=device, weights_only=False)
-except:
-    model = DiabetesModel(input_dim=10)
-    model.load_state_dict(torch.load(model_path, map_location=device))
-
+model = torch.load(model_path, map_location=device, weights_only=False)
 model.to(device)
 model.eval()
 
@@ -55,8 +50,8 @@ def home():
 def predict():
     try:
         data = request.get_json()
-        features = np.array([[data["age"], data["sex"], data["bmi"], data["bp"], 
-                              data["s1"], data["s2"], data["s3"], data["s4"], 
+        features = np.array([[data["age"], data["sex"], data["bmi"], data["bp"],
+                              data["s1"], data["s2"], data["s3"], data["s4"],
                               data["s5"], data["s6"]]], dtype=np.float32)
 
         input_tensor = torch.tensor(features, dtype=torch.float32).to(device)
@@ -77,6 +72,6 @@ def predict():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ✅ Required for Render
-if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=10000)
+# Render entry point
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
