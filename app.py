@@ -44,7 +44,7 @@ device = torch.device('cpu')  # Render is CPU only
 model = DiabetesModel(input_dim=10)  # Input dimension must match training
 
 # Load saved checkpoint
-checkpoint = torch.load("Dark-knight_model_fixed.pkl", map_location=device)
+checkpoint = torch.load("Dark-knight_model.pkl", map_location=device)
 model.load_state_dict(checkpoint["model_state_dict"])
 model.scaler_y = checkpoint.get("scaler_y", None)
 
